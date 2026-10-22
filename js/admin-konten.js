@@ -17,9 +17,13 @@
       fields: [{ k: 'nama', l: 'Nama produk', req: 1, full: 1, max: 120 }, { k: 'tipe', l: 'Tipe', t: 'list', opsi: TIPE_PRODUK }, { k: 'harga', l: 'Harga (Rp)', t: 'number', req: 1 },
         { k: 'harga_coret', l: 'Harga coret (Rp)', t: 'number', hint: 'Kosongkan bila tidak ada diskon' }, { k: 'link_beli', l: 'Link pembayaran', t: 'url', ph: 'https://…', hint: 'Kosong = pembeli diarahkan ke WhatsApp admin' },
         { k: 'deskripsi', l: 'Deskripsi', t: 'textarea', full: 1 }, { k: 'gambar_url', l: 'Gambar produk', t: 'img', full: 1 }, { k: 'status', l: 'Tampilkan di landing', t: 'status', full: 1 }] },
-    hasil: { label: 'Hasil Kelas', tambah: 'Tambah hasil', gambar: 'gambar_url', judul: 'judul', badge: function (r) { return U.tgl(r.tanggal); }, sub: function (r) { return r.nama_member + ' — ' + (r.ringkasan || ''); },
+    hasil: { label: 'Hasil Kelas', tambah: 'Tambah hasil', gambar: 'gambar_url', judul: 'judul', sub: function (r) { return r.nama_member + ' — ' + (r.ringkasan || ''); },
+      badge: function (r) { var n = daftarGaleri(r).length; return (U.ytId(r.video_url || '') ? '▶ Video · ' : n > 1 ? n + ' gambar · ' : '') + U.tgl(r.tanggal); },
       fields: [{ k: 'judul', l: 'Judul hasil', req: 1, full: 1, ph: 'Omzet peluncuran Rp 48,5 juta' }, { k: 'nama_member', l: 'Nama member', req: 1 }, { k: 'tanggal', l: 'Tanggal', t: 'date' },
-        { k: 'ringkasan', l: 'Ringkasan / kutipan', t: 'textarea', full: 1 }, { k: 'gambar_url', l: 'Gambar bukti', t: 'img', full: 1 }, { k: 'status', l: 'Tampilkan di landing', t: 'status', full: 1 }] },
+        { k: 'ringkasan', l: 'Ringkasan / kutipan', t: 'textarea', full: 1 },
+        { k: 'galeri', l: 'Galeri gambar bukti (maks. 5) — tampil sebagai slideshow otomatis', t: 'galeri', full: 1 },
+        { k: 'video_url', l: 'Atau tampilkan video YouTube (opsional)', t: 'yt', full: 1, ph: 'https://youtu.be/… atau https://www.youtube.com/watch?v=…', hint: 'Bila diisi, kartu menampilkan video 16:9 (menggantikan galeri). Cocok untuk trailer aplikasi member.' },
+        { k: 'status', l: 'Tampilkan di landing', t: 'status', full: 1 }] },
     testimoni: { label: 'Testimoni', tambah: 'Tambah testimoni', gambar: 'avatar_url', judul: 'nama', avatar: true, badge: function (r) { return '★ ' + (r.rating || 5); }, sub: function (r) { return (r.peran ? r.peran + ' — ' : '') + r.isi; },
       fields: [{ k: 'nama', l: 'Nama', req: 1 }, { k: 'peran', l: 'Peran / profesi' }, { k: 'rating', l: 'Rating', t: 'rating', full: 1 }, { k: 'isi', l: 'Isi testimoni', t: 'textarea', req: 1, full: 1 },
         { k: 'avatar_url', l: 'Foto (opsional)', t: 'img', full: 1 }, { k: 'status', l: 'Tampilkan di landing', t: 'status', full: 1 }] },
@@ -27,6 +31,12 @@
     kurikulum: { label: 'Modul', fields: [{ k: 'judul', l: 'Judul modul', req: 1, full: 1 }, { k: 'topik', l: 'Topik (satu per baris)', t: 'textarea', full: 1, hint: 'Setiap baris tampil sebagai poin di akordeon landing page.' }] }
   };
 
+  var GALERI_MAKS = 5;
+  function daftarGaleri(r) {
+    var g = String((r && r.galeri) || '').split(/\r?\n/).map(function (x) { return x.trim(); }).filter(Boolean);
+    if (!g.length && r && r.gambar_url) g = [r.gambar_url];
+    return g.slice(0, GALERI_MAKS);
+  }
   function konten() { return A.lokal('konten'); }
   function baris(jenis) { var k = konten(); return k ? (k[jenis] || []) : null; }
   function simpanLokal(jenis, rows) { var k = konten() || {}; k[jenis] = rows; A.simpan('konten', k); Store.usang('konten'); }
@@ -46,6 +56,16 @@
       case 'date': return '<div class="' + cls + '"><label class="label" for="' + id + '">' + esc(f.l) + '</label><input class="input" type="date" id="' + id + '" name="' + f.k + '" value="' + esc(String(v).slice(0, 10)) + '">' + hint + '</div>';
       case 'url': return '<div class="' + cls + '"><label class="label" for="' + id + '">' + esc(f.l) + '</label><input class="input" type="url" id="' + id + '" name="' + f.k + '" value="' + esc(v) + '" placeholder="' + esc(f.ph || '') + '">' + hint + '</div>';
       case 'img': return '<div class="' + cls + '"><span class="label">' + esc(f.l) + '</span>' + A.inputGambar(f.k, v, f.k === 'avatar_url' ? 'avatar' : 'konten') + '</div>';
+      case 'galeri':
+        var gl = daftarGaleri(r);
+        return '<div class="' + cls + '"><span class="label">' + esc(f.l) + '</span><div class="gal" data-gal><input type="hidden" name="galeri" value="' + esc(gl.join('\n')) + '"><div class="gal-list" data-gal-list></div>' +
+          '<div class="gal-tambah" data-gal-tambah><label class="btn btn-cream btn-sm" style="cursor:pointer">' + ic('i-upload') + '<span>Unggah gambar</span><input type="file" accept="image/jpeg,image/png,image/webp" multiple hidden></label>' +
+          '<input class="input input-sm" data-gal-url placeholder="atau tempel URL gambar https://…"><button class="btn btn-ghost btn-sm" type="button" data-gal-add>Tambah</button></div>' +
+          '<span class="hint">Maks. ' + GALERI_MAKS + ' gambar · rasio 16:9 disarankan (mis. 1280×720) · gambar pertama jadi sampul · bisa pilih beberapa file sekaligus</span></div></div>';
+      case 'yt':
+        var yid = U.ytId(String(v || ''));
+        return '<div class="' + cls + '"><label class="label" for="' + id + '">' + esc(f.l) + '</label><div class="yt-in"><div class="yt-prev" data-yt-prev>' + (yid ? '<img src="https://i.ytimg.com/vi/' + esc(yid) + '/hqdefault.jpg" alt="">' : ic('i-play')) + '</div>' +
+          '<input class="input" type="url" id="' + id + '" name="' + f.k + '" value="' + esc(v) + '" placeholder="' + esc(f.ph || '') + '" data-yt-in></div>' + hint + '</div>';
       case 'status': return '<div class="' + cls + '"><label class="switch"><input type="checkbox" name="status" data-status ' + (String(v || 'aktif') !== 'nonaktif' ? 'checked' : '') + '><span class="track"></span>' + esc(f.l) + '</label></div>';
       case 'rating': return '<div class="' + cls + '"><span class="label">' + esc(f.l) + '</span><input type="hidden" name="rating" value="' + (Number(v) || 5) + '"><div class="rating-in" data-rating>' + [1, 2, 3, 4, 5].map(function (i) { return '<button type="button" data-r="' + i + '" class="' + (i <= (Number(v) || 5) ? 'on' : '') + '" aria-label="' + i + ' bintang"><svg viewBox="0 0 24 24"><use href="#i-star"/></svg></button>'; }).join('') + '</div></div>';
       case 'list': return '<div class="' + cls + '"><label class="label" for="' + id + '">' + esc(f.l) + '</label><input class="input" id="' + id + '" name="' + f.k + '" list="dl-' + f.k + '" value="' + esc(v) + '"><datalist id="dl-' + f.k + '">' + f.opsi.map(function (o) { return '<option value="' + esc(o) + '">'; }).join('') + '</datalist></div>';
@@ -65,7 +85,9 @@
       var v = String(el.value || '').trim();
       if (f.req && !v) err.push(f.l + ' wajib diisi.');
       if (f.t === 'number') v = v === '' ? (f.req ? '' : 0) : Number(v);
-      if ((f.t === 'url' || f.t === 'img') && v && !/^https?:\/\//i.test(v)) err.push(f.l + ' harus diawali https://');
+      if ((f.t === 'url' || f.t === 'img' || f.t === 'yt') && v && !/^https?:\/\//i.test(v)) err.push(f.l + ' harus diawali https://');
+      if (f.t === 'yt' && v && !U.ytId(v)) err.push('URL video YouTube tidak dikenali.');
+      if (f.t === 'galeri') { if ($('.gal-item.proses', form)) err.push('Tunggu unggahan gambar galeri selesai.'); if (v) o.gambar_url = v.split('\n')[0]; }
       if (f.t === 'rating') v = Number(v) || 5;
       o[f.k] = v;
     });
@@ -74,10 +96,64 @@
   }
   function pasangForm(inn) {
     A.pasangGambar(inn);
+    $$('[data-gal]', inn).forEach(pasangGaleri);
+    $$('[data-yt-in]', inn).forEach(function (el) {
+      var prev = el.parentNode.querySelector('[data-yt-prev]');
+      el.addEventListener('input', function () { var id = U.ytId(el.value.trim()); prev.innerHTML = id ? '<img src="https://i.ytimg.com/vi/' + esc(id) + '/hqdefault.jpg" alt="">' : ic('i-play'); prev.classList.toggle('salah', !!el.value.trim() && !id); });
+    });
     var r = $('[data-rating]', inn);
     if (r) r.addEventListener('click', function (e) { var b = e.target.closest('[data-r]'); if (!b) return; var n = +b.dataset.r; $('[name=rating]', inn).value = n; $$('button', r).forEach(function (x) { x.classList.toggle('on', +x.dataset.r <= n); }); });
     var c = $('[data-cta-pilih]', inn);
     if (c) c.addEventListener('change', function () { if (c.value) { $('[name=cta_link]', inn).value = c.value; c.value = ''; } });
+  }
+
+  /** Komponen galeri: daftar gambar 16:9, urutkan ◀ ▶, hapus, unggah banyak sekaligus, maks 5 */
+  function pasangGaleri(box) {
+    var inp = $('input[name=galeri]', box), list = $('[data-gal-list]', box), tambah = $('[data-gal-tambah]', box), file = $('input[type=file]', box), url = $('[data-gal-url]', box);
+    var item = inp.value ? inp.value.split('\n').filter(Boolean) : [], proses = 0;
+    var gambar = function () {
+      inp.value = item.join('\n');
+      list.innerHTML = item.map(function (u, i) {
+        return '<div class="gal-item"><img src="' + esc(u) + '" alt="" referrerpolicy="no-referrer" onerror="this.style.opacity=.2"><span class="gal-no">' + (i === 0 ? 'Sampul' : i + 1) + '</span>' +
+          '<div class="gal-aksi"><button type="button" data-gal-geser="-1" data-i="' + i + '" aria-label="Geser ke kiri"' + (i === 0 ? ' disabled' : '') + '>' + ic('i-left') + '</button>' +
+          '<button type="button" data-gal-geser="1" data-i="' + i + '" aria-label="Geser ke kanan"' + (i === item.length - 1 ? ' disabled' : '') + '>' + ic('i-right') + '</button>' +
+          '<button type="button" data-gal-hapus="' + i + '" aria-label="Hapus gambar">' + ic('i-x') + '</button></div></div>';
+      }).join('') + Array.apply(null, Array(proses)).map(function () { return '<div class="gal-item proses"><span class="spin"></span></div>'; }).join('') +
+        (item.length + proses === 0 ? '<div class="gal-kosong">' + ic('i-img') + '<span>Belum ada gambar</span></div>' : '');
+      var penuh = item.length + proses >= GALERI_MAKS;
+      tambah.classList.toggle('penuh', penuh);
+      $$('input, button', tambah).forEach(function (x) { x.disabled = penuh; });
+    };
+    var tambahUrl = function () {
+      var v = url.value.trim(); if (!v) return;
+      if (!/^https:\/\//i.test(v)) { U.toast('URL gambar harus diawali https://', 'err'); return; }
+      if (item.length >= GALERI_MAKS) { U.toast('Galeri maksimal ' + GALERI_MAKS + ' gambar.', 'err'); return; }
+      if (item.indexOf(v) === -1) item.push(v);
+      url.value = ''; gambar();
+    };
+    list.addEventListener('click', function (e) {
+      var g = e.target.closest('[data-gal-geser]'), h = e.target.closest('[data-gal-hapus]');
+      if (g) { var i = +g.dataset.i, j = i + (+g.dataset.galGeser); if (j < 0 || j >= item.length) return; var t = item[i]; item[i] = item[j]; item[j] = t; gambar(); }
+      if (h) { item.splice(+h.dataset.galHapus, 1); gambar(); }
+    });
+    $('[data-gal-add]', box).addEventListener('click', tambahUrl);
+    url.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); tambahUrl(); } });
+    file.addEventListener('change', function () {
+      var sisa = GALERI_MAKS - item.length - proses, files = Array.prototype.slice.call(file.files || []);
+      file.value = '';
+      if (!files.length) return;
+      if (files.length > sisa) U.toast('Hanya ' + sisa + ' gambar lagi yang bisa ditambahkan (maks. ' + GALERI_MAKS + ').', 'info', 5000);
+      files = files.slice(0, Math.max(0, sisa));
+      proses += files.length; gambar();
+      // unggah berurutan agar tidak membebani server
+      files.reduce(function (p, f) {
+        return p.then(function () {
+          return A.unggah(f, 'hasil').then(function (r) { item.push(r.url); }).catch(function (e) { U.toast(f.name + ': ' + e.message, 'err', 6000); })
+            .then(function () { proses--; gambar(); });
+        });
+      }, Promise.resolve()).then(function () { if (files.length) U.toast('Galeri diperbarui — klik Simpan untuk menerapkan.'); });
+    });
+    gambar();
   }
 
   /** Buka laci form tambah/ubah. ekstra: field tetap (mis. kelas_id) */
@@ -155,6 +231,7 @@
   // ---------------- Halaman daftar generik ----------------
   function kartuKonten(jenis, r, i, n) {
     var sk = SKEMA[jenis], g = r[sk.gambar], nonaktif = r.status === 'nonaktif';
+    if (jenis === 'hasil' && U.ytId(r.video_url || '')) g = 'https://i.ytimg.com/vi/' + U.ytId(r.video_url) + '/hqdefault.jpg';
     var gambar = sk.avatar ? '<div class="kcard-img" style="aspect-ratio:auto;padding:22px;display:grid;place-items:center;background:var(--cream-card)"><span class="avatar" style="width:72px;height:72px;font-size:1.3rem">' + (g ? '<img src="' + esc(g) + '" alt="" referrerpolicy="no-referrer">' : esc(U.inisial(r.nama))) + '</span></div>' :
       '<div class="kcard-img">' + (g ? '<img src="' + esc(g) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">' : '<div class="ph">' + ic('i-img') + '</div>') + (sk.badge && sk.badge(r) ? '<span class="badge">' + esc(sk.badge(r)) + '</span>' : '') + (sk.urut ? '<span class="urut">#' + (i + 1) + '</span>' : '') + '</div>';
     return '<article class="kcard' + (nonaktif ? ' nonaktif' : '') + (r._simpan ? ' menyimpan' : '') + '" data-id="' + esc(r.id) + '">' + gambar +

@@ -500,7 +500,43 @@ window.EKA = (function () {
     return '<div class="upl" data-upl="' + esc(nama) + '" data-jenis="' + esc(jenis || 'gambar') + '"><div class="upl-prev">' + (nilai ? '<img src="' + esc(nilai) + '" alt="" referrerpolicy="no-referrer">' : ic('i-img')) + '</div>' +
       '<div class="upl-act"><div class="row"><label class="btn btn-cream btn-sm" style="cursor:pointer">' + ic('i-upload') + '<span>Unggah</span><input type="file" accept="image/jpeg,image/png,image/webp" hidden></label>' +
       (nilai ? '<button class="btn btn-ghost btn-sm" type="button" data-hapus-img>Hapus</button>' : '') + '</div>' +
-      '<input class="input input-sm" name="' + esc(nama) + '" value="' + esc(nilai || '') + '" placeholder="atau tempel URL gambar https://…"><span class="hint">JPG/PNG/WebP, maks 2 MB (dikompres otomatis)</span></div></div>';
+      '<input class="input input-sm" name="' + esc(nama) + '" value="' + esc(nilai || '') + '" placeholder="atau tempel URL gambar https://…"><span class="hint">' + (jenis === 'konten' ? 'Rasio 16:9 disarankan (mis. 1280×720) · ' : '') + 'JPG/PNG/WebP, maks 2 MB (dikompres otomatis)</span></div></div>';
+  };
+
+  // ================================================================ UNGGAH MUSIK LATAR (Superadmin)
+  var MIME_AUDIO = { mp3: 'audio/mpeg', m4a: 'audio/mp4', aac: 'audio/aac', ogg: 'audio/ogg', oga: 'audio/ogg', wav: 'audio/wav', webm: 'audio/webm' };
+  A.inputAudio = function (nama, nilai) {
+    return '<div class="aud" data-aud><div class="aud-prev">' + (nilai ? '<audio controls preload="none" src="' + esc(nilai) + '"></audio>' : '<span class="muted">' + ic('i-music') + 'Belum ada musik latar.</span>') + '</div>' +
+      '<div class="upl-act"><div class="row"><label class="btn btn-cream btn-sm" style="cursor:pointer">' + ic('i-upload') + '<span>Unggah musik</span><input type="file" accept="audio/*,.mp3,.m4a,.aac,.ogg,.wav" hidden></label>' +
+      '<button class="btn btn-ghost btn-sm" type="button" data-hapus-aud' + (nilai ? '' : ' hidden') + '>Kosongkan</button></div>' +
+      '<input class="input input-sm" name="' + esc(nama) + '" value="' + esc(nilai || '') + '" placeholder="atau tempel URL https://… / assets/musik.mp3">' +
+      '<span class="hint">MP3/M4A/OGG maks 8 MB · disimpan di Drive (folder 🎵 Musik Latar) · tanpa iklan. Setelah mengunggah, klik <b>Simpan pengaturan</b>.</span></div></div>';
+  };
+  A.pasangAudio = function (root) {
+    $$('[data-aud]', root).forEach(function (box) {
+      var inp = $('input[name]', box), prev = $('.aud-prev', box), file = $('input[type=file]', box), hps = $('[data-hapus-aud]', box);
+      var setPrev = function (u) { prev.innerHTML = u ? '<audio controls preload="none" src="' + esc(u) + '"></audio>' : '<span class="muted">' + ic('i-music') + 'Belum ada musik latar.</span>'; hps.hidden = !u; };
+      inp.addEventListener('change', function () { setPrev(inp.value.trim()); });
+      hps.addEventListener('click', function () { inp.value = ''; setPrev(''); });
+      file.addEventListener('change', function () {
+        var f = file.files[0]; file.value = ''; if (!f) return;
+        var ext = (f.name.split('.').pop() || '').toLowerCase(), mime = MIME_AUDIO[ext] || f.type;
+        if (mime === 'audio/x-m4a') mime = 'audio/mp4';
+        if (!/^audio\//.test(mime || '')) { U.toast('Pilih berkas audio (MP3, M4A, OGG, WAV).', 'err'); return; }
+        if (f.size > 8 * 1024 * 1024) { U.toast('Ukuran musik maksimal 8 MB. Kompres dulu (mis. MP3 128 kbps).', 'err', 6000); return; }
+        prev.innerHTML = '<span class="muted"><span class="spin"></span> Mengunggah ' + (f.size / 1048576).toFixed(1) + ' MB…</span>';
+        var baca = new FileReader();
+        baca.onerror = function () { setPrev(inp.value.trim()); U.toast('Berkas tidak bisa dibaca.', 'err'); };
+        baca.onload = function () {
+          API.call('upload.audio', { mime: mime, nama: f.name, data: baca.result }, { timeout: 180000 }).then(function (r) {
+            if (!r.success) { setPrev(inp.value.trim()); U.toast(r.message || 'Unggah gagal.', 'err', 6000); return; }
+            inp.value = r.data.url; setPrev(r.data.url);
+            if (r.data.peringatan) U.toast(r.data.peringatan, 'info', 8000); else U.toast(r.message, 'ok', 6000);
+          });
+        };
+        baca.readAsDataURL(f);
+      });
+    });
   };
   A.pasangGambar = function (root) {
     $$('[data-upl]', root).forEach(function (box) {

@@ -15,7 +15,9 @@
     { j: 'Teks halaman', ikon: 'i-edit', k: [['HERO_BADGE', 'Lencana di atas judul hero'], ['SOSIAL_BUKTI', 'Teks bukti sosial (rating)'], ['FITUR1_JUDUL', 'Kartu 1 — judul'], ['FITUR1_TEKS', 'Kartu 1 — teks'], ['FITUR2_JUDUL', 'Kartu 2 — judul'], ['FITUR2_TEKS', 'Kartu 2 — teks'],
       ['FITUR3_JUDUL', 'Kartu 3 — judul'], ['FITUR3_TEKS', 'Kartu 3 — teks'], ['CTA_JUDUL', 'Banner ajakan — judul'], ['CTA_TEKS', 'Banner ajakan — teks', 'textarea'], ['FOOTER_DESKRIPSI', 'Deskripsi footer', 'textarea']] },
     { j: 'SEO & tautan', ikon: 'i-search', k: [['SEO_JUDUL', 'Judul halaman (tab & Open Graph)'], ['SEO_DESKRIPSI', 'Meta deskripsi', 'textarea'], ['APP_URL', 'URL landing page (untuk {link})', 'url']] },
-    { j: 'Lainnya', ikon: 'i-gear', k: [['KELAS_UTAMA', 'Kelas yang tampil di landing', 'kelas'], ['CRM_SYNC_MENIT', 'Interval sinkron CRM otomatis (menit)', 'number']] }
+    { j: 'Lainnya', ikon: 'i-gear', k: [['KELAS_UTAMA', 'Kelas yang tampil di landing', 'kelas'], ['CRM_SYNC_MENIT', 'Interval sinkron CRM otomatis (menit)', 'number']] },
+    { j: 'Musik latar & animasi', ikon: 'i-music', k: [['BACKSOUND_AKTIF', 'Putar musik latar di landing page', 'switch'], ['BACKSOUND_URL', 'File musik', 'audio'], ['BACKSOUND_JUDUL', 'Judul lagu (opsional)'], ['BACKSOUND_VOLUME', 'Volume musik (5–100%)', 'number'],
+      ['LEBAH_AKTIF', 'Animasi lebah mengikuti kursor (desktop)', 'switch']] }
   ];
   A.daftar('pengaturan', {
     mount: function (el, act) {
@@ -33,6 +35,7 @@
     var field = function (d) {
       var k = d[0], v = n[k] == null ? '' : n[k], t = d[2], ket = (p.keterangan || {})[k];
       if (t === 'img') return '<div class="field full"><span class="label">' + esc(d[1]) + '</span>' + A.inputGambar(k, v, 'logo') + '</div>';
+      if (t === 'audio') return '<div class="field full"><span class="label">' + esc(d[1]) + '</span>' + A.inputAudio(k, v) + '</div>';
       if (t === 'switch') return '<label class="switch full"><input type="checkbox" name="' + k + '"' + (v === 'YA' ? ' checked' : '') + '><span class="track"></span>' + esc(d[1]) + '</label>';
       if (t === 'textarea') return '<div class="field full"><label class="label" for="pg-' + k + '">' + esc(d[1]) + '</label><textarea class="textarea" id="pg-' + k + '" name="' + k + '" style="min-height:80px">' + esc(v) + '</textarea></div>';
       if (t === 'kelas') return '<div class="field"><label class="label" for="pg-' + k + '">' + esc(d[1]) + '</label><select class="select" id="pg-' + k + '" name="' + k + '"><option value="">(kelas pertama)</option>' + kelas.map(function (x) { return '<option value="' + esc(x.id) + '"' + (String(x.id) === v ? ' selected' : '') + '>' + esc(x.nama) + '</option>'; }).join('') + '</select></div>';
@@ -42,7 +45,7 @@
       '<div class="card"><div class="sect"><div class="sect-t">' + ic('i-chat') + 'Notifikasi & template pesan</div><p class="muted">Saklar WhatsApp/email untuk pembeli & admin, token Fonnte, serta template pesan dengan variabel <span class="mono-box">{nama}</span> <span class="mono-box">{produk}</span> diatur di menu WhatsApp & Notifikasi.</p><a class="btn btn-cream" href="#/wa?tab=config">' + ic('i-gear') + 'Buka konfigurasi notifikasi</a></div></div>' +
       '<div class="card"><div class="sect"><div class="sect-t">' + ic('i-db') + 'Data dummy</div><p class="muted">Data contoh (ID berawalan <span class="mono-box">DMY-</span>) beserta gambarnya di Drive. Hapus sebelum go-live; data asli tidak tersentuh.</p>' +
       '<div class="tb"><button class="btn btn-cream" type="button" id="pg-dmy-isi">' + ic('i-plus') + 'Isi data dummy</button><button class="btn btn-danger" type="button" id="pg-dmy-hapus">' + ic('i-trash') + 'Hapus data dummy</button></div></div></div></div>';
-    A.pasangGambar(el);
+    A.pasangGambar(el); A.pasangAudio(el);
     var dummy = function (aksi) {
       A.konfirmasi(aksi === 'hapus' ? { judul: 'Hapus semua data dummy?', pesan: 'Hero, produk, hasil, testimoni, kelas, leads, dan kunjungan contoh akan dihapus; gambar contoh dipindah ke Sampah Drive.', ok: 'Hapus data dummy', bahaya: true } :
         { judul: 'Isi data dummy?', pesan: 'Menambahkan data contoh yang belum ada (tidak menimpa data Anda).', ok: 'Isi data dummy' }).then(function (y) {
